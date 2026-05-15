@@ -30,17 +30,20 @@ class LeadIntelligenceState(TypedDict):
 
 def _lead_to_text(lead: dict) -> str:
     designation = lead.get('designation') or lead.get('title', 'Unknown')
-    return f"""Name: {lead.get('name', 'Unknown')}
-Designation: {designation}
-Company: {lead.get('company', 'Unknown')}
-Industry: {lead.get('industry', 'Unknown')}
-Company Size: {lead.get('company_size', 'Unknown')}
-Location: {lead.get('location', 'Unknown')}
-Website: {lead.get('website', 'N/A')}
-Existing Services: {lead.get('existing_services', 'Unknown')}
-Portfolio: {lead.get('portfolio', 'N/A')}
-Revenue: {lead.get('revenue', 'Unknown')}
-Notes: {lead.get('notes', 'None')}"""
+    lines = [
+        f"Name: {lead.get('name', 'Unknown')}",
+        f"Designation: {designation}",
+        f"Company: {lead.get('company', 'Unknown')}",
+        f"Industry: {lead.get('industry', 'Unknown')}",
+        f"Company Size: {lead.get('company_size', 'Unknown')}",
+        f"Location: {lead.get('location', 'Unknown')}",
+        f"Website: {lead.get('website', 'N/A')}",
+        f"Existing Services: {lead.get('existing_services', 'Unknown')}",
+        f"Portfolio: {lead.get('portfolio', 'N/A')}",
+        f"Revenue: {lead.get('revenue', 'Unknown')}",
+        f"Notes: {lead.get('notes', 'None')}",
+    ]
+    return "\n".join(lines)
 
 
 def web_enrich_node(state: LeadIntelligenceState) -> LeadIntelligenceState:
@@ -58,6 +61,7 @@ def web_enrich_node(state: LeadIntelligenceState) -> LeadIntelligenceState:
         "web_context": web_ctx,
         "completed_steps": state.get("completed_steps", []) + ["web_enriched"],
     }
+
 
 
 def retrieve_context_node(state: LeadIntelligenceState) -> LeadIntelligenceState:
