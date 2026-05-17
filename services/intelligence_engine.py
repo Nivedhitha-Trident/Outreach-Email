@@ -1,8 +1,6 @@
 import json
-from datetime import datetime
 from graphs.intelligence_graph import run_lead_intelligence
 from store import save_analysis, get_analysis
-from services.llm_service import invoke_llm
 
 
 def analyze_lead(lead: dict, force_refresh: bool = False) -> dict:

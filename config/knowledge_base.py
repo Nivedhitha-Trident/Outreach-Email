@@ -1,4 +1,6 @@
 TRIDENT_KB = """
+NAME= senthil kumar
+ROLE= founder & CEO
 COMPANY: itTrident (formerly Testing Solutionz / Trident SQA).
 TAGLINE: "AI-Powered Software Engineering. From Strategy to Production. Faster Than You Expect."
 FOUNDED: 2011 in Chennai, by three engineers.
@@ -51,12 +53,33 @@ DELIVERY:
 """
 
 TRIDENT_KB_DOC_ID = "trident_kb_v1"
-TRIDENT_KB_TITLE = "itTrident Knowledge Base"
+TRIDENT_KB_TITLE  = "itTrident Knowledge Base"
 
-TRIDENT_INTRO = (
-    "I am Senthilkumar, Founder at itTrident, an IT services company with 15 years of expertise "
-    "in building enterprise software solutions. We have delivered 89+ projects across 15+ industries "
-    "including Banking, Aviation, Healthcare, Fintech, Manufacturing, Logistics, Retail, and EdTech — "
-    "for clients in India, the US, and the Middle East. ISO 9001:2015 and ISO 27001:2022 certified, "
-    "with a 95% client retention rate and an average partnership of 12+ years."
-)
+
+def _parse_kb_identity(kb_text: str) -> tuple[str, str, str]:
+    """Extract sender name, company name, and years of experience from the KB doc."""
+    import re
+    from datetime import date
+
+    name         = ""
+    company      = ""
+    founded_year = None
+
+    for line in kb_text.splitlines():
+        s = line.strip()
+        if re.match(r'NAME\s*[=:]', s, re.I) and not name:
+            val  = re.split(r'[=:]', s, maxsplit=1)[1].strip()
+            name = val.title()
+        elif re.match(r'COMPANY\s*[=:]', s, re.I) and not company:
+            val     = re.split(r'[=:]', s, maxsplit=1)[1].strip()
+            company = re.split(r'[\(,]', val)[0].strip().rstrip('.')
+        elif re.match(r'FOUNDED\s*[=:]', s, re.I) and not founded_year:
+            m = re.search(r'\b(19|20)\d{2}\b', s)
+            if m:
+                founded_year = int(m.group())
+
+    years = f"{date.today().year - founded_year} years" if founded_year else "10+ years"
+    return name or "Founder", company or "Company", years
+
+
+SENDER_NAME, COMPANY_NAME, YEARS_EXPERIENCE = _parse_kb_identity(TRIDENT_KB)

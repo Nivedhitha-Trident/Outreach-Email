@@ -2,7 +2,6 @@ import sys, os, re
 sys.path.insert(0, os.path.dirname(__file__))
 
 import streamlit as st
-import pandas as pd
 import io
 
 st.set_page_config(

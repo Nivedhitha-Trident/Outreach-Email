@@ -1,11 +1,10 @@
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from store import save_outreach, save_analysis, get_analysis
 from services.llm_service import invoke_llm, stream_llm
-from services.memory_service import recall_case_studies, store_outreach
+from services.memory_service import store_outreach
 from services.chroma_manager import semantic_search, format_search_results_as_context
 from config.settings import COLLECTIONS, ROLE_TIERS
-from config.knowledge_base import TRIDENT_INTRO
+from config.knowledge_base import SENDER_NAME, COMPANY_NAME, YEARS_EXPERIENCE
 from prompts.templates import PERSONALIZED_EMAIL_PROMPT, EMAIL_JUDGE_PROMPT
 
 
@@ -37,11 +36,11 @@ def role_profile_text(designation: str) -> str:
 def _parse_web_sections(web_ctx: str) -> dict:
     """Split web_context into typed buckets for targeted use in email generation."""
     buckets = {
-        "website_pages":   [],   # Jina-scraped pages (services, about, case studies)
-        "search_snippets": [],   # Tavily / web search results
-        "hiring_signals":  [],   # hiring/jobs snippets
-        "tech_stack":      [],   # technology signals
-        "wikipedia":       [],   # Wikipedia summary
+        "website_pages":   [],
+        "search_snippets": [],
+        "hiring_signals":  [],
+        "tech_stack":      [],
+        "wikipedia":       [],
     }
     if not web_ctx:
         return buckets
@@ -80,7 +79,6 @@ def _infer_company_stage(company_size: str) -> str:
         return "Growth stage (50–200 people)"
     if any(x in s for x in ["1", "5", "10", "15", "20", "30", "startup", "early", "seed"]):
         return "Startup (< 50 people)"
-    # fallback: try to parse a number
     import re
     nums = re.findall(r'\d+', s)
     if nums:
@@ -116,17 +114,14 @@ def _build_context(lead: dict, analysis: dict) -> dict:
     solutions_text    = format_search_results_as_context(sol_results, max_tokens=900)
     case_studies_text = format_search_results_as_context(cs_results,  max_tokens=600)
 
-    # Parse web research into typed buckets
     web_buckets = _parse_web_sections(analysis.get("web_context", ""))
 
-    # Website intel: scraped services/about/case-study pages — most valuable for personalisation
     website_intel = ""
     if web_buckets["website_pages"]:
         website_intel = "\n\n---\n\n".join(web_buckets["website_pages"][:3])
     elif web_buckets["search_snippets"]:
         website_intel = "\n".join(f"• {s}" for s in web_buckets["search_snippets"][:4])
 
-    # Tech stack from scraping vs. lead field
     scraped_stack = "\n".join(f"• {s}" for s in web_buckets["tech_stack"][:3])
     hiring_intel  = "\n".join(f"• {s}" for s in web_buckets["hiring_signals"][:3])
 
@@ -155,9 +150,11 @@ def _build_context(lead: dict, analysis: dict) -> dict:
         "solutions":         solutions_text or "our enterprise solutions portfolio",
         "case_studies":      case_studies_text or "Available on request",
         "business_analysis": analysis.get("business_analysis", "")[:800],
-        "company_intro":     TRIDENT_INTRO,
         "services_gap":      services_gap,
         "website_intel":     website_intel or "No website data scraped.",
+        "sender_name":       SENDER_NAME,
+        "company_name":      COMPANY_NAME,
+        "years_experience":  YEARS_EXPERIENCE,
     }
 
 
@@ -178,7 +175,6 @@ def _generate_variants(prompt: str) -> tuple[str, str, str]:
                 results[idx] = fut.result()
             except Exception:
                 results[idx] = ""
-    # Fallback: if any variant failed, replace with a sequential call
     for i, r in enumerate(results):
         if not r:
             results[i] = invoke_llm(prompt, temperature=temperatures[i], max_tokens=1200)
@@ -224,7 +220,6 @@ def generate_output(
     prompt = PERSONALIZED_EMAIL_PROMPT.format(**ctx, email_type="strategic cold outreach")
 
     if stream:
-        # Stream mode: single variant (streaming 3 in parallel isn't practical)
         def _gen():
             full = ""
             for chunk in stream_llm(prompt):
@@ -233,7 +228,6 @@ def generate_output(
             _persist(lead, output_type, full)
         return _gen()
 
-    # ── 3-variant + judge flow ────────────────────────────────────────────────
     if on_progress:
         on_progress("Drafting 3 email variants in parallel…", 20)
 
@@ -244,7 +238,6 @@ def generate_output(
 
     content = _judge_variants(ctx, v1, v2, v3)
 
-    # Save all 3 variants for reference
     save_analysis(lead_id, "email_variant_1", v1)
     save_analysis(lead_id, "email_variant_2", v2)
     save_analysis(lead_id, "email_variant_3", v3)

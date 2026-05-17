@@ -1,6 +1,4 @@
 import uuid
-import json
-from pathlib import Path
 from config.settings import COLLECTIONS, CHUNK_SIZE, CHUNK_OVERLAP
 from services.chroma_manager import add_documents
 from store import save_kb_document
