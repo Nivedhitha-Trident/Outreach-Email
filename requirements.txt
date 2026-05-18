@@ -17,3 +17,7 @@ reportlab>=4.1.0
 numpy>=1.24.0
 requests>=2.31.0
 tiktoken>=0.6.0
+duckduckgo-search>=6.0.0
+wikipedia-api>=0.7.0
+# Search & enrichment (Tavily primary, Serper fallback, Proxycurl for LinkedIn)
+# No extra packages needed — all use requests which is already listed above

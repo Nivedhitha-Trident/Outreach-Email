@@ -54,10 +54,9 @@ TRIDENT_KB_DOC_ID = "trident_kb_v1"
 TRIDENT_KB_TITLE = "itTrident Knowledge Base"
 
 TRIDENT_INTRO = (
-    "itTrident is a 120+ engineer software engineering firm founded in 2011, with offices in Chennai, "
-    "New York, and UAE. We deliver across eight practice lines — Digital Product Engineering, Data & AI, "
-    "Quality Engineering, Cloud & Platform, Cybersecurity, Enterprise Productivity, Data Engineering & BI, "
-    "and Governance & Strategy — serving 15+ industries including Banking, Aviation, Healthcare, Fintech, "
-    "and Manufacturing. ISO 9001:2015 and ISO 27001:2022 certified, with 89+ projects delivered, "
-    "95% client retention, and an average partnership of 12+ years."
+    "I am Senthilkumar, Founder at itTrident, an IT services company with 15 years of expertise "
+    "in building enterprise software solutions. We have delivered 89+ projects across 15+ industries "
+    "including Banking, Aviation, Healthcare, Fintech, Manufacturing, Logistics, Retail, and EdTech — "
+    "for clients in India, the US, and the Middle East. ISO 9001:2015 and ISO 27001:2022 certified, "
+    "with a 95% client retention rate and an average partnership of 12+ years."
 )

@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, re
 sys.path.insert(0, os.path.dirname(__file__))
 
 import streamlit as st
@@ -536,35 +536,112 @@ def render_brief_panel(lead: dict):
                         f'{urg_badge}{detail_html}</div>',
                         unsafe_allow_html=True)
 
-            # Web Research (Wikipedia + DuckDuckGo)
-            web_ctx = cached_analysis.get("web_context", "")
-            if web_ctx:
-                st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
-                st.markdown(
-                    '<div style="font-size:0.75rem;font-weight:700;letter-spacing:0.1em;'
-                    'text-transform:uppercase;color:#5555aa;margin-bottom:0.5rem;">Web Research</div>',
-                    unsafe_allow_html=True)
-                for block in web_ctx.strip().split("\n\n"):
-                    lines = block.strip().splitlines()
-                    if not lines:
-                        continue
-                    header = lines[0].strip("[]") if lines[0].startswith("[") else ""
-                    body   = "\n".join(lines[1:]) if header else block
-                    source_icon = "📖" if "Wikipedia" in header else "🌐"
-                    header_html = (
-                        f'<div style="font-size:0.72rem;font-weight:600;color:#7070b8;'
-                        f'margin-bottom:3px;">{source_icon} {header}</div>'
-                        if header else ""
-                    )
-                    st.markdown(
-                        f'{header_html}'
-                        f'<div style="font-size:0.80rem;color:#8888bb;line-height:1.65;'
-                        f'background:#0f0f1e;border-left:2px solid #2a2a50;'
-                        f'border-radius:0 6px 6px 0;padding:0.5rem 0.8rem;'
-                        f'margin-bottom:0.5rem;white-space:pre-wrap;">{body}</div>',
-                        unsafe_allow_html=True)
-
     st.markdown("<div style='margin-top:0.6rem;'></div>", unsafe_allow_html=True)
+
+    # ── Web Research — own expander, always visible ───────────────────────────
+    cached_analysis_for_web = st.session_state.analysis_cache.get(lid)
+    web_ctx = (cached_analysis_for_web or {}).get("web_context", "")
+
+    with st.expander("🌐 Web Research & Scraped Content", expanded=bool(web_ctx)):
+        if not web_ctx:
+            st.caption("Web research will appear here after analysis runs.")
+        else:
+            # Split on §§§ separator; fallback to \n\n for older cached data
+            raw_sections = web_ctx.strip().split("§§§")
+            if len(raw_sections) == 1 and "\n\n" in web_ctx:
+                raw_sections = [s for s in web_ctx.strip().split("\n\n") if s.strip().startswith("[")]
+
+            # Categorise sections by type for rich rendering
+            SECTION_META = {
+                "Wikipedia":      ("📖 Wikipedia",       "#1e1e35", "#4444aa", False),
+                "Website:":       ("🌐 Scraped Page",    "#101e18", "#2a6a4a", True),
+                "Tavily":         ("🔍 Tavily Search",   "#1a1a10", "#6a5a10", False),
+                "Web Search":     ("🔍 Web Search",      "#1a1a10", "#6a5a10", False),
+                "Hiring Signals": ("💼 Hiring Signals",  "#1a1225", "#7744aa", False),
+                "Tech Stack":     ("⚙️ Tech Stack",      "#0f1a1f", "#1a6a8a", False),
+            }
+
+            for block in raw_sections:
+                block = block.strip()
+                if not block:
+                    continue
+
+                lines        = block.splitlines()
+                header_raw   = lines[0].strip("[]") if lines[0].startswith("[") else ""
+                body         = "\n".join(lines[1:]).strip() if header_raw else block
+                if not body:
+                    continue
+
+                # Match section type
+                meta = next(
+                    (v for k, v in SECTION_META.items() if k in header_raw),
+                    ("🌐 Web Data", "#13131f", "#3a3a60", False),
+                )
+                label_text, bg, border, is_scrape = meta
+
+                # Extract URL from header if present
+                url_match    = re.search(r'https?://\S+', header_raw)
+                page_url     = url_match.group() if url_match else ""
+                clean_header = re.sub(r'https?://\S+', '', header_raw).strip(" —-")
+
+                st.markdown(
+                    f'<div style="background:{bg};border:1px solid {border};border-radius:8px;'
+                    f'padding:0.6rem 0.9rem;margin:0.4rem 0 0.2rem 0;">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:center;">'
+                    f'<span style="font-size:0.72rem;font-weight:700;color:{border};'
+                    f'letter-spacing:0.08em;text-transform:uppercase;">{label_text} — {clean_header}</span>'
+                    f'{"<a href=" + chr(34) + page_url + chr(34) + " target=_blank style=" + chr(34) + "font-size:0.72rem;color:#4a8a6a;text-decoration:none;" + chr(34) + ">↗ open</a>" if page_url else ""}'
+                    f'</div>'
+                    f'<div style="font-size:0.7rem;color:#3a3a60;margin-top:2px;">{len(body):,} chars</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                if is_scrape:
+                    # Scraped pages: render as markdown in a scrollable box
+                    preview   = body[:3000] + ("\n\n…[truncated]" if len(body) > 3000 else "")
+                    remaining = body[3000:] if len(body) > 3000 else ""
+                    st.markdown(
+                        f'<div style="background:#0c1a12;border-left:3px solid {border};'
+                        f'border-radius:0 6px 6px 0;padding:0.7rem 1rem;'
+                        f'font-size:0.8rem;color:#9090b8;line-height:1.65;'
+                        f'max-height:320px;overflow-y:auto;white-space:pre-wrap;">'
+                        f'{preview}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    if remaining:
+                        with st.expander(f"Show remaining {len(remaining):,} chars"):
+                            st.text(remaining)
+                elif "Hiring" in label_text:
+                    # Hiring signals: each bullet as a pill
+                    bullets = [ln.lstrip("•- ").strip() for ln in body.splitlines() if ln.strip()]
+                    pills   = "".join(
+                        f'<div style="background:#1e1235;border:1px solid #5533aa;border-radius:6px;'
+                        f'padding:5px 10px;margin:3px 0;font-size:0.8rem;color:#b090e0;">'
+                        f'💼 {b}</div>'
+                        for b in bullets if b
+                    )
+                    st.markdown(pills, unsafe_allow_html=True)
+                elif "Tech Stack" in label_text:
+                    # Tech stack: chips
+                    bullets = [ln.lstrip("•- ").strip() for ln in body.splitlines() if ln.strip()]
+                    chips   = "".join(
+                        f'<span style="display:inline-block;background:#0f1e28;border:1px solid #1a5a7a;'
+                        f'border-radius:20px;padding:3px 10px;margin:3px 3px;'
+                        f'font-size:0.75rem;color:#60b0d0;">⚙️ {b}</span>'
+                        for b in bullets if b
+                    )
+                    st.markdown(f'<div style="margin:4px 0;">{chips}</div>', unsafe_allow_html=True)
+                else:
+                    # Tavily / Wikipedia / Web Search: bullet list
+                    bullets = [ln.lstrip("•- ").strip() for ln in body.splitlines() if ln.strip()]
+                    html    = "".join(
+                        f'<div style="border-left:2px solid {border};background:{bg};'
+                        f'border-radius:0 4px 4px 0;padding:5px 10px;margin:3px 0;'
+                        f'font-size:0.8rem;color:#9090c0;line-height:1.55;">{b}</div>'
+                        for b in bullets if b
+                    )
+                    st.markdown(html, unsafe_allow_html=True)
 
     # ── Auto-analyze on open ──────────────────────────────────────────────────
     analysis = st.session_state.analysis_cache.get(lid)
@@ -590,8 +667,20 @@ def render_brief_panel(lead: dict):
     if gen_btn:
         prog_bar = st.progress(0)
         status   = st.empty()
-        status.markdown("✍️ Writing outreach email…")
-        generate_output(lead, analysis, "personalized_email", stream=False, force_refresh=force_new)
+
+        def _on_progress(msg: str, pct: int):
+            status.markdown(
+                f'<div style="font-size:0.82rem;color:#9090c0;">{msg}</div>',
+                unsafe_allow_html=True,
+            )
+            prog_bar.progress(pct)
+
+        _on_progress("✍️ Drafting 3 email variants in parallel…", 15)
+        generate_output(
+            lead, analysis, "personalized_email",
+            stream=False, force_refresh=force_new,
+            on_progress=_on_progress,
+        )
         prog_bar.progress(100)
         st.session_state.brief_cache[lid] = True
         status.empty()
@@ -611,6 +700,38 @@ def render_brief_panel(lead: dict):
         if subject:
             st.markdown(f'<div class="subject-line">📧 {subject}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="email-box">{body}</div>', unsafe_allow_html=True)
+
+        # ── All 3 draft variants (collapsed) ─────────────────────────────────
+        v1 = db_get(lid, "email_variant_1")
+        v2 = db_get(lid, "email_variant_2")
+        v3 = db_get(lid, "email_variant_3")
+        if v1 or v2 or v3:
+            with st.expander("📋 View all 3 drafts the AI evaluated"):
+                st.markdown(
+                    '<div style="font-size:0.72rem;color:#4a4a70;margin-bottom:0.5rem;">'
+                    'The winning email above was selected from these 3 variants by a judge LLM '
+                    'scoring personalization, hook strength, proof point relevance, and CTA quality.'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+                for n, variant in enumerate([v1, v2, v3], 1):
+                    if variant:
+                        temps = {1: "0.55 — structured", 2: "0.78 — balanced", 3: "0.96 — creative"}
+                        st.markdown(
+                            f'<div style="font-size:0.75rem;font-weight:700;color:#5555aa;'
+                            f'margin:0.8rem 0 0.3rem 0;">Draft {n} '
+                            f'<span style="font-weight:400;color:#3a3a60;">'
+                            f'(temp {temps[n]})</span></div>',
+                            unsafe_allow_html=True,
+                        )
+                        st.text_area(
+                            label="",
+                            value=variant,
+                            height=220,
+                            disabled=True,
+                            key=f"draft_{lid}_{n}",
+                            label_visibility="collapsed",
+                        )
 
         # ── Send / Edit / Download row ────────────────────────────────────────
         already_sent = lid in st.session_state.sent_emails

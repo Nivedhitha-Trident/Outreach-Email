@@ -4,6 +4,20 @@ from chromadb.config import Settings
 from config.settings import COLLECTIONS, TOP_K_RESULTS
 from services.llm_service import embed_texts, embed_query
 
+# Workaround: on Python 3.14 the Rust bindings may fail to initialize,
+# leaving self.bindings unset. stop() then crashes with AttributeError.
+try:
+    from chromadb.api.rust import RustBindingsAPI as _RustAPI
+    _orig_stop = _RustAPI.stop
+    def _safe_stop(self):
+        try:
+            _orig_stop(self)
+        except AttributeError:
+            pass
+    _RustAPI.stop = _safe_stop
+except Exception:
+    pass
+
 _client = None
 _collections = {}
 
