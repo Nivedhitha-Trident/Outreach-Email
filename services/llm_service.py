@@ -1,9 +1,7 @@
 import json
 import re
-from typing import Any, Generator
+from typing import Generator
 import openai
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
 from config.settings import (
     DEEPINFRA_API_KEY, DEEPINFRA_BASE_URL,
     LLM_MODEL, EMBED_MODEL, EMBEDDING_BATCH_SIZE,
@@ -11,8 +9,6 @@ from config.settings import (
 )
 
 _openai_client = None
-_llm_instance = None
-_llm_streaming_instance = None
 
 
 def get_openai_client() -> openai.OpenAI:
@@ -23,17 +19,6 @@ def get_openai_client() -> openai.OpenAI:
             base_url=DEEPINFRA_BASE_URL,
         )
     return _openai_client
-
-
-def get_llm(temperature: float = LLM_TEMPERATURE, max_tokens: int = LLM_MAX_TOKENS, streaming: bool = False) -> ChatOpenAI:
-    return ChatOpenAI(
-        openai_api_key=DEEPINFRA_API_KEY,
-        openai_api_base=DEEPINFRA_BASE_URL,
-        model_name=LLM_MODEL,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        streaming=streaming,
-    )
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:

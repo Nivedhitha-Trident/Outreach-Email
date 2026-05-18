@@ -1,13 +1,11 @@
 import json
-from typing import TypedDict, Optional, Any
+from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from services.llm_service import invoke_llm, invoke_llm_json
-from services.chroma_manager import semantic_search, format_search_results_as_context
 from services.memory_service import (
-    recall_industry_context, recall_relevant_solutions, recall_case_studies,
+    recall_industry_context, recall_relevant_solutions,
     store_lead_intelligence, store_ai_insight
 )
-from config.settings import COLLECTIONS
 from prompts.templates import (
     BUSINESS_INTELLIGENCE_PROMPT,
     PAIN_POINT_EXTRACTION_PROMPT,

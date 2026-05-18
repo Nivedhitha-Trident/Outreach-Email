@@ -2,7 +2,6 @@ import sys, os, re
 sys.path.insert(0, os.path.dirname(__file__))
 
 import streamlit as st
-import pandas as pd
 import io
 
 st.set_page_config(
@@ -267,7 +266,7 @@ def render_sidebar():
         st.markdown("---")
 
         # Step 1: Upload Leads
-        st.markdown('<div class="step-label">Step 1 — Upload Leads (Excel / CSV)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="step-label">Step 1: Upload Leads (Excel / CSV)</div>', unsafe_allow_html=True)
         lead_file = st.file_uploader("Leads file", type=["xlsx", "xls", "csv"],
                                      label_visibility="collapsed", key="lead_upload")
         if lead_file:
@@ -374,7 +373,7 @@ def render_main():
 <div class="empty-hint">
     <div style="font-size:2.5rem;margin-bottom:1rem;">✉</div>
     <strong>Upload your leads file to get started</strong><br><br>
-    1. Upload Excel / CSV with leads — sidebar left<br>
+    1. Upload Excel / CSV with leads (sidebar left)<br>
     2. Click a lead to open its full brief page
 </div>
 """, unsafe_allow_html=True)
@@ -401,7 +400,7 @@ def render_main():
                 )
         st.markdown("<hr style='border-color:#1e1e30;margin:0.8rem 0 1rem 0;'>", unsafe_allow_html=True)
 
-    st.markdown(f'<div class="step-label">Step 3 — Select a lead ({len(leads)} total)</div>',
+    st.markdown(f'<div class="step-label">Step 3: Select a lead ({len(leads)} total)</div>',
                 unsafe_allow_html=True)
 
     search = st.text_input("Search", placeholder="🔍 Search company or name…",
@@ -542,7 +541,7 @@ def render_brief_panel(lead: dict):
     cached_analysis_for_web = st.session_state.analysis_cache.get(lid)
     web_ctx = (cached_analysis_for_web or {}).get("web_context", "")
 
-    with st.expander("🌐 Web Research & Scraped Content", expanded=bool(web_ctx)):
+    with st.expander("🌐 Web Research & Scraped Content", expanded=False):
         if not web_ctx:
             st.caption("Web research will appear here after analysis runs.")
         else:
@@ -589,7 +588,7 @@ def render_brief_panel(lead: dict):
                     f'padding:0.6rem 0.9rem;margin:0.4rem 0 0.2rem 0;">'
                     f'<div style="display:flex;justify-content:space-between;align-items:center;">'
                     f'<span style="font-size:0.72rem;font-weight:700;color:{border};'
-                    f'letter-spacing:0.08em;text-transform:uppercase;">{label_text} — {clean_header}</span>'
+                    f'letter-spacing:0.08em;text-transform:uppercase;">{label_text}: {clean_header}</span>'
                     f'{"<a href=" + chr(34) + page_url + chr(34) + " target=_blank style=" + chr(34) + "font-size:0.72rem;color:#4a8a6a;text-decoration:none;" + chr(34) + ">↗ open</a>" if page_url else ""}'
                     f'</div>'
                     f'<div style="font-size:0.7rem;color:#3a3a60;margin-top:2px;">{len(body):,} chars</div>'
@@ -716,7 +715,7 @@ def render_brief_panel(lead: dict):
                 )
                 for n, variant in enumerate([v1, v2, v3], 1):
                     if variant:
-                        temps = {1: "0.55 — structured", 2: "0.78 — balanced", 3: "0.96 — creative"}
+                        temps = {1: "0.55 (structured)", 2: "0.78 (balanced)", 3: "0.96 (creative)"}
                         st.markdown(
                             f'<div style="font-size:0.75rem;font-weight:700;color:#5555aa;'
                             f'margin:0.8rem 0 0.3rem 0;">Draft {n} '
