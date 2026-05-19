@@ -40,3 +40,16 @@ logs/
 *.db
 *.sqlite
 .cache/
+
+# Frontend / React / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.parcel-cache/
+frontend/coverage/
+frontend/.DS_Store
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*

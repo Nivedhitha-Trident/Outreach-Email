@@ -257,6 +257,18 @@ def _role_pill(designation: str) -> str:
     return f'<span class="role-pill pill-{cls}">{lbl}</span>' if lbl else ""
 
 
+def _parse_email_content(content: str) -> tuple[str, str]:
+    subject, body = "", content or ""
+    if content and "Subject:" in content:
+        lines = content.split("\n")
+        for i, ln in enumerate(lines):
+            if ln.strip().lower().startswith("subject:"):
+                subject = ln.split(":", 1)[1].strip()
+                body = "\n".join(lines[i + 1:]).strip()
+                break
+    return subject, body
+
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 def render_sidebar():
@@ -689,13 +701,7 @@ def render_brief_panel(lead: dict):
     # ── Outreach email ────────────────────────────────────────────────────────
     content = db_get(lid, "output_personalized_email")
     if content:
-        subject, body = "", content
-        if "Subject:" in content:
-            for i, ln in enumerate(content.split("\n")):
-                if ln.strip().lower().startswith("subject:"):
-                    subject = ln.split(":", 1)[1].strip()
-                    body = "\n".join(content.split("\n")[i+1:]).strip()
-                    break
+        subject, body = _parse_email_content(content)
         if subject:
             st.markdown(f'<div class="subject-line">📧 {subject}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="email-box">{body}</div>', unsafe_allow_html=True)
@@ -737,20 +743,43 @@ def render_brief_panel(lead: dict):
         sa, sb, sc = st.columns([1, 1, 1])
 
         if sa.button(
-            "✅ Sent" if already_sent else "📤 Mark as Sent",
+            "✅ Sent" if already_sent else "📤 Send & Mark as Sent",
             key=f"send_{lid}",
             type="primary" if not already_sent else "secondary",
             use_container_width=True,
             disabled=already_sent,
         ):
             from datetime import datetime
-            st.session_state.sent_emails[lid] = {
-                "name":     lead.get("name", ""),
-                "company":  lead.get("company", ""),
-                "email":    lead.get("email", ""),
-                "sent_at":  datetime.now().strftime("%d %b %Y, %I:%M %p"),
-            }
-            st.rerun()
+            from services.email_sender import send_email, smtp_configured
+
+            to_email = lead.get("email", "").strip()
+            subject, body = _parse_email_content(content)
+
+            if not to_email:
+                st.error("This lead does not have an email address to send to.")
+            elif not smtp_configured():
+                st.error(
+                    "SMTP is not configured yet. Add SMTP_HOST, SMTP_PORT, SMTP_USER, "
+                    "SMTP_PASSWORD, and SMTP_FROM_EMAIL to your .env file."
+                )
+            else:
+                try:
+                    send_email(
+                        to_email=to_email,
+                        subject=subject or f"Quick note for {lead.get('company', lead.get('name', 'you'))}",
+                        body=body,
+                        reply_to=None,
+                    )
+                    st.session_state.sent_emails[lid] = {
+                        "name":     lead.get("name", ""),
+                        "company":  lead.get("company", ""),
+                        "email":    lead.get("email", ""),
+                        "sent_at":  datetime.now().strftime("%d %b %Y, %I:%M %p"),
+                    }
+                    st.success(f"Email sent to {to_email}")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Failed to send email: {exc}")
 
         with sb.expander("✏️ Edit"):
             edited = st.text_area("", value=content, height=260,
